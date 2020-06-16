@@ -1,0 +1,77 @@
+#!/bin/bash
+
+CASE_NAME=UNKNOWN
+NOVNC_URL='http://mycuster/kanaka-noVNC-33e1462/vnc_auto.html'
+
+CASE_SCRIPT=$(realpath ${1:-case_config.ini})
+SITE_SCRIPT=$(realpath ${2:-site_config.ini})
+
+# get case-specifig config paths (overriding defaults)
+if [ -f "${CASE_SCRIPT}" ]; then
+  sed -e "s@\[CASE\]@#!/bin/bash@" "${CASE_SCRIPT}" > case_config
+  . case_config
+fi
+
+# get site-specifig config paths (overriding defaults)
+if [ -f "${SITE_SCRIPT}" ]; then
+  sed -e "s@\[SITE\]@#!/bin/bash@" "${SITE_SCRIPT}" > site_config
+  . site_config
+fi
+
+FILEPATH=./list_dockers_pass
+
+NUM=$( wc -l ${FILEPATH}| sed -e "s}^\([0-9]*\).*}\1}" )
+
+function min {
+   ( [ $1 -le $2 ] && echo $1 ) || ( [ $2 -lt $1 ] && echo $2 ) 
+}
+
+DATE=$(date +%F_%H-%M-%S)
+
+echo '{ "nodes": [' > nodes.json
+#echo 'echo '' >> nodes.json' >> nodes.json
+i=0
+while IFS='' read -r -u3 line || [[ -n "$line" ]]; do
+    #&& IFS='' read -r -u4 line2
+  if [ X"${line}" == X"" ]; then  
+      echo "error too old passord file."
+      rm -f nodes.json
+      exit 2
+  fi
+
+  i2=$((2*(i+1)))
+  i0=$(printf "%03d" $((i+1)))
+  thishost=${line% *}
+  pass=${line##* }
+  
+  #IFS=' ' read -r -a aline <<<${line2}
+  # line=$(echo ${line2} |sed -e 's/"/$/g')
+  # IFS='$' read -r -a aline <<<$line
+  # echo ${aline[0]}
+  # echo ${aline[1]}
+
+  if [ $i -gt 0 ]; then
+      echo '},' >> nodes.json
+  fi
+  echo '{"title" : "'$i0' '$file_name'" ,' >> nodes.json
+  echo '  "variable" : "ID-'$i0'_'$file_name'",' >> nodes.json
+
+  URL=$(echo $NOVNC_URL | envsubst) # expand envars in $NOVNC_URL
+  echo ' "url" : "'${URL}'?host='${HTTP_FRONTEND}'&port='${SOCKETdomain}${i0}'&encrypt=0&password='${pass}'&true_color=1",' >> nodes.json
+  echo ' "comment" : "'$( echo $line2| sed -e s/\"//g )' '${DATE}'",' >> nodes.json
+  echo ' "usersNotes"  : "This is node '$i'  : Docker host '${thishost}' and noVNC server for file '${file_name}'",' >> nodes.json
+  echo ' "tags"  : ["'$reactants'", "'$products'", "'$energy'", "'$type_'", "'$method'", "'$impfact'",  "'$temp'"]' >> nodes.json
+
+  i=$(( i + 1 ))
+done 3< list_dockers_pass
+
+echo '}' >> nodes.json
+echo '] }' >> nodes.json
+
+echo "var text_ = " > nodes.js
+cat nodes.json >> nodes.js
+echo 'var jsDataTab = text_.nodes;' >> nodes.js
+
+#../../build_qr
+
+exit 0

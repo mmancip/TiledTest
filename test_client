@@ -1,0 +1,23 @@
+#!/bin/bash
+cd /home/myuser/CASE
+#DATA_PATH_DOCKER=${1:-}
+#file_name=${2:-15.xyz}
+
+
+echo ${DOCKERID}; export DISPLAY=:1;
+
+glxgears > /dev/null 2>&1 &
+
+i=0
+while [ true ]; do
+    sleep 1
+    pgrep -fla glxgears | wc -l |awk '{print ($1 >= 1)}' |grep 1
+    RET=$?
+    if [ $RET -eq 0 ]; then
+	break
+    elif [ $i -gt 100 ]; then
+	break
+    fi
+    i=$((i+1))
+done
+exit $RET
