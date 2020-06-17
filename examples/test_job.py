@@ -85,7 +85,7 @@ if __name__ == '__main__':
     CASEdir=os.path.join(JOBPath,CASE)
 
     # get TiledTest package from Github
-    #os.system("git clone https://github.com/mmancip/TiledTest.git TEST")
+    os.system("git clone https://github.com/mmancip/TiledTest.git")
     # Untar Test package
     # os.system("tar xfz TiledTest.tgz")
     
