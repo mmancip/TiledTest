@@ -84,10 +84,10 @@ if __name__ == '__main__':
     print("Out of mkdir %s : %s" % (CASE, str(client.get_OK())))
     CASEdir=os.path.join(JOBPath,CASE)
 
-    # get TiledAstrochem package from Github
-    #os.system("git clone https://github.com/mmancip/TiledAstrochem.git TEST")
+    # get TiledTest package from Github
+    #os.system("git clone https://github.com/mmancip/TiledTest.git TEST")
     # Untar Test package
-    os.system("tar xfz TiledTest.tgz")
+    # os.system("tar xfz TiledTest.tgz")
     
     # command='launch TS='+TileSet+" "+TiledVizPath+" cp -p build_qr "+os.path.join(JOBPath,'..')
     # print("cp build_qr : %s" % (command))
@@ -106,7 +106,7 @@ if __name__ == '__main__':
         send_file_server(client,TileSet,".", "list_hostsgpu", CASEdir)
     except:
         print("Error sending files !")
-        traceback.print_exc(file=sys.stderr)
+        traceback.print_exc(file=sys.stdout)
         try:
             code.interact(banner="Try sending files by yourself :",local=dict(globals(), **locals()))
         except SystemExit:
@@ -132,7 +132,7 @@ if __name__ == '__main__':
     print("Out of launch dockers : "+ str(client.get_OK()))
 
     # Build nodes.json file from new dockers list
-    COMMAND='launch TS='+TileSet+" "+CASEdir+' ../build_nodes_file '+CASE_config+' '+SITE_config
+    COMMAND='launch TS='+TileSet+" "+CASEdir+' ../build_nodes_file '+CASE_config+' '+SITE_config+' '+TileSet
     print("\nCommand dockers : "+COMMAND)
 
     client.send_server(COMMAND)
@@ -157,22 +157,33 @@ if __name__ == '__main__':
         print("Out of xrandr : "+ str(client.get_OK()))
     launch_resize()
 
-    def launch_smallsize():
-        launch_resize(RESOL="950x420")
+    def launch_changesize(RESOL="1920x1080",tileNum=-1,tileId='001'):
+        if ( tileNum > -1 ):
+            TilesStr=' Tiles=('+containerId(tileNum+1)+') '
+        else:
+            TilesStr=' Tiles=('+tileId+') '
+        COMMAND='execute TS='+TileSet+TilesStr+' xrandr --fb '+RESOL
+        print("call server with : "+COMMAND)
+        client.send_server(COMMAND)
+        print("server answer is "+str(client.get_OK()))
+    
+    def launch_smallsize(tileNum=-1,tileId='001'):
+        print("Launch launch_changesize smallsize for tile "+str(tileNum))
+        launch_changesize(tileNum=timeNum,RESOL="950x420")
 
-    def launch_bigsize():
-        launch_resize(RESOL="1920x1200")
+    def launch_bigsize(tileNum=-1,tileId='001'):
+        print("Launch launch_changesize bigsize for tile "+str(tileNum))
+        launch_changesize(tileNum=tileNum,RESOL="1920x1200")
 
-    # # TODO : give a liste of lines !
+    # # Use a metadata tab to exchange element source
     # for i in range(NUM_DOCKERS):
-    #     #line=taglist.readline().split(' ')
-    #     #file_name=(line[1].split('='))[1].replace('"','')
+    #     line=taglist.readline().split(' ')
+    #     file_name=(line[1].split('='))[1].replace('"','')
     #     COMMAND=' Tiles=('+containerId(i+1)+') '+os.path.join(/home/myuser/CASE,'test_client')
     #     #+' '+' '+file_name
     #     print("%d TEST command : %s" % (i,COMMAND))
     #     CommandTS='execute TS='+TileSet+COMMAND
     #     client.send_server(CommandTS)
-    
     #     client.get_OK()
 
     def launch_client_global(script='test_client'):
@@ -188,13 +199,12 @@ if __name__ == '__main__':
     def launch_one_client(script='test_client',tileNum=-1,tileId='001'):
         COMMAND=' '+os.path.join("/home/myuser/CASE",script)
         if ( tileNum > -1 ):
-            TileStr=' Tiles=('+containerId(tileNum+1)+') '
+            TilesStr=' Tiles=('+containerId(tileNum+1)+') '
         else:
-            TileStr=' Tiles=('+tileId+') '
+            TilesStr=' Tiles=('+tileId+') '
         print("launch command on %s : %s" % (TilesStr,COMMAND))
         CommandTS='execute TS='+TileSet+TilesStr+COMMAND
-        client.send_server(CommandTS)
-        
+        client.send_server(CommandTS)        
         client.get_OK()
 
     
@@ -203,14 +213,19 @@ if __name__ == '__main__':
         print("Out of wmctrl : "+ str(client.get_OK()))
     get_windows()
 
-    def movewindows(windowname="glxgears",wmctrl_option='toggle,fullscreen'):
+    def fullscreenApp(windowname="glxgears",tileNum=-1):
+        movewindows(windowname="glxgears",wmctrl_option='toggle,fullscreen',tileNum=tileNum)
+
+    def movewindows(windowname="glxgears",wmctrl_option='toggle,fullscreen',tileNum=-1,tileId='001'):
         #remove,maximized_vert,maximized_horz
         #toggle,above
-        #movewindows(windowname='glxgears',wmctrl_option="toggle,fullscreen")
-        for i in range(NUM_DOCKERS):
-            client.send_server('execute TS='+TileSet+' Tiles=('+containerId(i+1)+') '+
-                               '/opt/movewindows '+windowname+' -b '+wmctrl_option)
-            client.get_OK()
+        #movewindows(windowname='glxgears',wmctrl_option="toggle,fullscreen",tileNum=2)
+        if ( tileNum > -1 ):
+            TilesStr=' Tiles=('+containerId(tileNum+1)+') '
+        else:
+            TilesStr=' Tiles=('+tileId+') '
+        client.send_server('execute TS='+TileSet+TilesStr+'/opt/movewindows '+windowname+' -b '+wmctrl_option)
+        client.get_OK()
 
     def toggle_fullscr():
         for i in range(NUM_DOCKERS):
@@ -227,19 +242,18 @@ if __name__ == '__main__':
     # Launch Server for commands from FlaskDock
     print("GetActions=ClientAction("+str(connectionId)+",globals=dict(globals()),locals=dict(**locals()))")
     sys.stdout.flush()
-    # try:
-    #     code.interact(banner="Code interact :",local=dict(globals(), **locals()))
-    # except SystemExit:
-    #     pass
+
     try:
         GetActions=ClientAction(connectionId,globals=dict(globals()),locals=dict(**locals()))
-        #GetActions     def launch_one_client(script='test_client',tileNum=-1,tileId='001'
+        outHandler.flush()
     except:
-        traceback.print_exc(file=sys.stderr)
-        code.interact(banner="Code interact :",local=dict(globals(), **locals()))
-        
+        traceback.print_exc(file=sys.stdout)
+        code.interact(banner="Error ClientAction :",local=dict(globals(), **locals()))
+
+    print("Actions \n",str(tiles_actions))
+    sys.stdout.flush()
     try:
-        code.interact(banner="Code interact :",local=dict(globals(), **locals()))
+        code.interact(banner="Interactive console to use actions directly :",local=dict(globals(), **locals()))
     except SystemExit:
         pass
 

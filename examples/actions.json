@@ -1,0 +1,7 @@
+{"action1":["launch_tunnel","input"],
+ "action2":["launch_vnc","airplay"],
+ "action3":["launch_smallsize","tab"],
+ "action4":["launch_bigsize","picture_in_picture"],
+ "action5":["launch_one_client","launch"],
+ "action6":["fullscreenApp","all_out"],
+ "action7":["kill_all_containers","delete_forever"]}
