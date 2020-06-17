@@ -169,7 +169,7 @@ if __name__ == '__main__':
     
     def launch_smallsize(tileNum=-1,tileId='001'):
         print("Launch launch_changesize smallsize for tile "+str(tileNum))
-        launch_changesize(tileNum=timeNum,RESOL="950x420")
+        launch_changesize(tileNum=tileNum,RESOL="950x420")
 
     def launch_bigsize(tileNum=-1,tileId='001'):
         print("Launch launch_changesize bigsize for tile "+str(tileNum))
