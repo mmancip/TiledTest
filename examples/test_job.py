@@ -132,16 +132,26 @@ if __name__ == '__main__':
     print("Out of launch dockers : "+ str(client.get_OK()))
 
     # Build nodes.json file from new dockers list
-    COMMAND='launch TS='+TileSet+" "+CASEdir+' ../build_nodes_file '+CASE_config+' '+SITE_config+' '+TileSet
-    print("\nCommand dockers : "+COMMAND)
+    def build_nodes_file():
+        print("Build nodes.json file from new dockers list.")
+        COMMAND='launch TS='+TileSet+" "+CASEdir+' ../build_nodes_file '+CASE_config+' '+SITE_config+' '+TileSet
+        print("\nCommand dockers : "+COMMAND)
 
-    client.send_server(COMMAND)
-    print("Out of build_nodes_file : "+ str(client.get_OK()))
+        client.send_server(COMMAND)
+        print("Out of build_nodes_file : "+ str(client.get_OK()))
+        time.sleep(2)
+        os.system('rm -f ./nodes.json')
+        get_file_client(client,TileSet,CASEdir,"nodes.json",".")
     
-    get_file_client(client,TileSet,CASEdir,"nodes.json",".")
+    build_nodes_file()
 
     time.sleep(2)
     # Launch docker tools
+    def launch_resize(RESOL="1440x900"):
+        client.send_server('execute TS='+TileSet+' xrandr --fb '+RESOL)
+        print("Out of xrandr : "+ str(client.get_OK()))
+    launch_resize()
+
     def launch_tunnel():
         client.send_server('execute TS='+TileSet+' /opt/tunnel_ssh '+SOCKETdomain+' '+HTTP_FRONTEND+' '+HTTP_LOGIN)
         print("Out of tunnel_ssh : "+ str(client.get_OK()))
@@ -152,10 +162,6 @@ if __name__ == '__main__':
         print("Out of vnccommand : "+ str(client.get_OK()))
     launch_vnc()
 
-    def launch_resize(RESOL="1440x900"):
-        client.send_server('execute TS='+TileSet+' xrandr --fb '+RESOL)
-        print("Out of xrandr : "+ str(client.get_OK()))
-    launch_resize()
 
     def launch_changesize(RESOL="1920x1080",tileNum=-1,tileId='001'):
         if ( tileNum > -1 ):
@@ -239,23 +245,7 @@ if __name__ == '__main__':
         client.send_server('launch TS='+TileSet+" "+JOBPath+" "+COMMANDStop)
         client.close()
 
-    # Launch Server for commands from FlaskDock
-    print("GetActions=ClientAction("+str(connectionId)+",globals=dict(globals()),locals=dict(**locals()))")
-    sys.stdout.flush()
-
-    try:
-        GetActions=ClientAction(connectionId,globals=dict(globals()),locals=dict(**locals()))
-        outHandler.flush()
-    except:
-        traceback.print_exc(file=sys.stdout)
-        code.interact(banner="Error ClientAction :",local=dict(globals(), **locals()))
-
-    print("Actions \n",str(tiles_actions))
-    sys.stdout.flush()
-    try:
-        code.interact(banner="Interactive console to use actions directly :",local=dict(globals(), **locals()))
-    except SystemExit:
-        pass
+    launch_actions_and_interact()
 
     kill_all_containers()
 
