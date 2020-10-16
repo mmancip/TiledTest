@@ -140,8 +140,8 @@ if __name__ == '__main__':
         client.send_server(COMMAND)
         print("Out of build_nodes_file : "+ str(client.get_OK()))
         time.sleep(2)
-        os.system('rm -f ./nodes.json')
         get_file_client(client,TileSet,CASEdir,"nodes.json",".")
+        #os.system('rm -f ./nodes.json')
     
     build_nodes_file()
 
