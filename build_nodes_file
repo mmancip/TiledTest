@@ -71,7 +71,7 @@ while IFS='' read -r -u3 line || [[ -n "$line" ]]; do
   # echo ${aline[1]}
 
   # example of real tag val line :
-  aline="1 tagval=\"{tagReal,0.0,"$i","$NUM".0}\" "
+  IFS=' ' read -r -a aline <<<"1 tagval=\"{tagReal,0.0,"$i","$NUM".0}\" "
   # example call function tag_real to format this tag (it will be the last $NUM tag) : 
   tagreal=$(tag_real "aline" 1 "tagval" $NUM)
   
