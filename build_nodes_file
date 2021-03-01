@@ -29,6 +29,25 @@ function min {
 
 DATE=$(date +%F_%H-%M-%S)
 
+function tag_int() {
+    local line=$1
+    local lineid=$2
+    local name=$3
+    local tagid=$4
+    local out=${tagid}_$(eval echo \${$line[$lineid]} |sed -e "s&\ &_&g" -e "s/.*$name=\"\(.*\)\".*/\1/")
+    echo $out
+}
+
+function tag_real() {
+    local line=$1
+    local lineid=$2
+    local name=$3
+    local tagid=$4
+    local out=$(eval echo \${$line[$lineid]} |sed -e "s&\ &_&g" -e "s/.*$name=\"\(.*\)\".*/\1/" -e "s/{/{${tagid}_/")
+    echo $out
+}
+
+
 echo '{ "nodes": [' > nodes.json
 #echo 'echo '' >> nodes.json' >> nodes.json
 i=0
@@ -51,6 +70,11 @@ while IFS='' read -r -u3 line || [[ -n "$line" ]]; do
   # echo ${aline[0]}
   # echo ${aline[1]}
 
+  # example of real tag val line :
+  aline="1 tagval=\"{tagReal,0.0,"$i","$NUM".0}\" "
+  # example call function tag_real to format this tag (it will be the last $NUM tag) : 
+  tagreal=$(tag_real "aline" 1 "tagval" $NUM)
+  
   if [ $i -gt 0 ]; then
       echo '},' >> nodes.json
   fi
@@ -61,8 +85,8 @@ while IFS='' read -r -u3 line || [[ -n "$line" ]]; do
   echo ' "url" : "'${URL}'?host='${HTTP_FRONTEND}'&port='${SOCKETdomain}${i0}'&encrypt=0&password='${pass}'&true_color=1",' >> nodes.json
   echo ' "comment" : "'$( echo $line2| sed -e s/\"//g )' '${DATE}'",' >> nodes.json
   echo ' "usersNotes"  : "This is node '$i'  : Docker host '${thishost}' and noVNC server for file '${file_name}'",' >> nodes.json
-  echo ' "tags"  : ["'$TileSet'"]' >> nodes.json
-  #"'$reactants'", "'$products'", "'$energy'", "'$type_'", "'$method'", "'$impfact'",  "'$temp'"
+  # example defined three tags :
+  echo ' "tags"  : ["'$TileSet'","'$i0'","'$tagreal'"]' >> nodes.json
 
   i=$(( i + 1 ))
 done 3< list_dockers_pass
