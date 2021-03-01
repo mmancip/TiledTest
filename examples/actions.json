@@ -1,7 +1,10 @@
-{"action1":["launch_tunnel","input"],
- "action2":["launch_vnc","airplay"],
- "action3":["launch_smallsize","tab"],
- "action4":["launch_bigsize","picture_in_picture"],
- "action5":["launch_one_client","launch"],
- "action6":["fullscreenApp","all_out"],
- "action7":["kill_all_containers","delete_forever"]}
+{"action1":["tunnel","input"],
+ "action2":["vnc","airplay"],
+ "action3":["clear_vnc","keyboard_hide"],
+ "action4":["Get_client_IP","fingerprint"],
+ "action5":["changeSize","photo_size_select_large"],
+ "action6":["launch_smallsize","tab"],
+ "action7":["launch_bigsize","picture_in_picture"],
+ "action8":["launch_one_client","launch"],
+ "action9":["fullscreenApp","all_out"],
+ "action10":["kill_all_containers","delete_forever"]}
