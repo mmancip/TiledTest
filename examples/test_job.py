@@ -160,11 +160,9 @@ def build_nodes_file():
     client.send_server(COMMAND)
     print("Out of build_nodes_file : "+ str(client.get_OK()))
     time.sleep(2)
-    launch_nodes_json()
 
 build_nodes_file()
 sys.stdout.flush()
-#get_file_client(client,TileSet,JOBPath,"nodes.json",".")
 
 time.sleep(2)
 # Launch docker tools
@@ -176,8 +174,18 @@ launch_resize()
 sys.stdout.flush()
 
 def launch_tunnel():
-    client.send_server(ExecuteTS+' /opt/tunnel_ssh '+SOCKETdomain+' '+HTTP_FRONTEND+' '+HTTP_LOGIN)
+    # Call tunnel for VNC
+    client.send_server(ExecuteTS+' /opt/tunnel_ssh '+HTTP_FRONTEND+' '+HTTP_LOGIN)
     print("Out of tunnel_ssh : "+ str(client.get_OK()))
+    # Get back PORT
+    for i in range(NUM_DOCKERS):
+        i0="%0.3d" % (i+1)
+        client.send_server(ExecuteTS+' Tiles=('+containerId(i+1)+') '+
+                           'bash -c "cat .vnc/port |xargs -I @ sed -e \"s#port='+SOCKETdomain+i0+'#port=@#\" -i CASE/nodes.json"')
+        print("Out of change port %s : " % (i0) + str(client.get_OK()))
+
+    sys.stdout.flush()
+    launch_nodes_json()
 
 launch_tunnel()
 sys.stdout.flush()
