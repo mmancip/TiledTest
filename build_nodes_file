@@ -1,7 +1,7 @@
 #!/bin/bash
 
 CASE_NAME=UNKNOWN
-NOVNC_URL='http://mycuster/kanaka-noVNC-33e1462/vnc_auto.html'
+NOVNC_URL='http://mycluster/kanaka-noVNC-33e1462/vnc_auto.html'
 
 CASE_SCRIPT=$(realpath ${1:-case_config.ini})
 SITE_SCRIPT=$(realpath ${2:-site_config.ini})
