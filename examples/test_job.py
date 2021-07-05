@@ -96,9 +96,6 @@ try:
     client.send_server(LaunchTS+' chmod og-rxw '+JOBPath)
     print("Out of chmod JOBPath : "+ str(client.get_OK()))
 
-    send_file_server(client,TileSet,"TiledTest","test_client",JOBPath)
-    send_file_server(client,TileSet,"TiledTest", "build_nodes_file", JOBPath)
-
     send_file_server(client,TileSet,".", CASE_config, JOBPath)
     CASE_config=os.path.join(JOBPath,CASE_config)
     send_file_server(client,TileSet,".", SITE_config, JOBPath)
@@ -114,16 +111,17 @@ except:
         pass
 
 
+
 COMMAND_TiledTest=LaunchTS+COMMAND_GIT
 client.send_server(COMMAND_TiledTest)
 print("Out of git clone TiledTest : "+ str(client.get_OK()))
 
-# COMMAND_copy=LaunchTS+" cp -rp TiledTest/test_client "+\
-#                "TiledTest/build_nodes_file "+\
-#                "./"
+COMMAND_copy=LaunchTS+" cp -rp TiledTest/test_client "+\
+               "TiledTest/build_nodes_file "+\
+               "./"
 
-# client.send_server(COMMAND_copy)
-# print("Out of copy scripts from TiledCourse : "+ str(client.get_OK()))
+client.send_server(COMMAND_copy)
+print("Out of copy scripts from TiledCourse : "+ str(client.get_OK()))
 
 # Launch containers HERE
 REF_CAS=str(NUM_DOCKERS)+" "+DATE+" "+DOCKERSPACE_DIR+" "+DOCKER_NAME
@@ -137,7 +135,7 @@ sys.stdout.flush()
 # Launch dockers
 # TileServer is given by TileServer.py to all containers of the tileset.
 def Run_dockers():
-    COMMAND="bash -vx -c \""+os.path.join(TILEDOCKERS_path,"launch_dockers")+" "+REF_CAS+" "+GPU_FILE+" "+HTTP_FRONTEND+":"+HTTP_IP+\
+    COMMAND="bash -c \""+os.path.join(TILEDOCKERS_path,"launch_dockers")+" "+REF_CAS+" "+GPU_FILE+" "+HTTP_FRONTEND+":"+HTTP_IP+\
             " "+network+" "+nethost+" "+domain+" "+init_IP+" TileSetPort "+UserFront+"@"+Frontend+" "+OPTIONS+\
             " > "+os.path.join(JOBPath,"output_launch")+" 2>&1 \"" 
 
@@ -201,6 +199,75 @@ launch_vnc()
 sys.stdout.flush()
 
 
+def launch_one_client(script='test_client',tileNum=-1,tileId='001'):
+    COMMAND=' '+os.path.join(CASE_DOCKER_PATH,script)
+    if ( tileNum > -1 ):
+        TilesStr=' Tiles=('+containerId(tileNum+1)+') '
+    else:
+        TilesStr=' Tiles=('+tileId+') '
+    print("launch command on %s : %s" % (TilesStr,COMMAND))
+    CommandTS=ExecuteTS+TilesStr+COMMAND
+    client.send_server(CommandTS)        
+    client.get_OK()
+
+def launch_client_global(script='test_client'):
+    COMMAND=' '+os.path.join(CASE_DOCKER_PATH,script)
+    print("launch command on all tiles : %s" % (COMMAND))
+    sys.stdout.flush()
+    CommandTS=ExecuteTS+COMMAND
+    client.send_server(CommandTS)
+
+    client.get_OK()
+
+launch_client_global(script='test_client')
+
+def get_new_nodes():
+    return
+tiles_actions["action0"]=["get_new_nodes","system_update_alt"]
+
+def next_element(script='test_client',tileNum=-1,tileId='001'):
+    COMMAND=' '+os.path.join(CASE_DOCKER_PATH,script)
+    COMMANDKill=' killall -9 glxgears'
+    if ( tileNum > -1 ):
+        tileId=containerId(tileNum+1)
+    else:
+        tileNum=int(tileId)-1 
+    TilesStr=' Tiles=('+tileId+') '
+    print("%s VMD command : %s" % (TilesStr,COMMAND))
+
+    CommandTSK=ExecuteTS+TilesStr+COMMANDKill
+    client.send_server(CommandTSK)
+    client.get_OK()
+    
+    CommandTS=ExecuteTS+TilesStr+COMMAND
+    client.send_server(CommandTS)
+    client.get_OK()
+
+    nodesf=open("nodes.json",'r')
+    nodes=json.load(nodesf)
+    nodesf.close()
+
+    import socket
+    hostname=socket.gethostname()
+
+    nodes["nodes"][tileNum]["title"]=tileId+" "+hostname
+    if ("variable" in nodes["nodes"][tileNum]):
+        nodes["nodes"][tileNum]["variable"]="ID-"+tileId+"_"+hostname
+    nodes["nodes"][tileNum]["comment"]="New comment for tile "+tileId
+    # if ("usersNotes" in nodes["nodes"][tileNum]):
+    #     nodes["nodes"][tileNum]["usersNotes"]=re.sub(r'file .*',"New Element host "+hostname,
+    #                                                  nodes["nodes"][tileNum]["usersNotes"])
+    nodes["nodes"][tileNum]["usersNotes"]="New Element host "+hostname
+    nodes["nodes"][tileNum]["tags"]=[]
+    nodes["nodes"][tileNum]["tags"].append(TileSet)
+    nodes["nodes"][tileNum]["tags"].append("NewElement")
+
+    nodesf=open("nodes.json",'w')
+    nodesf.write(json.dumps(nodes))
+    nodesf.close()
+    
+    
+
 def launch_changesize(RESOL="1920x1080",tileNum=-1,tileId='001'):
     if ( tileNum > -1 ):
         TilesStr=' Tiles=('+containerId(tileNum+1)+') '
@@ -218,29 +285,6 @@ def launch_smallsize(tileNum=-1,tileId='001'):
 def launch_bigsize(tileNum=-1,tileId='001'):
     print("Launch launch_changesize bigsize for tile "+str(tileNum))
     launch_changesize(tileNum=tileNum,RESOL="1920x1200")
-
-def launch_client_global(script='test_client'):
-    COMMAND=' '+os.path.join(CASE_DOCKER_PATH,script)
-    print("launch command on all tiles : %s" % (COMMAND))
-    sys.stdout.flush()
-    CommandTS=ExecuteTS+COMMAND
-    client.send_server(CommandTS)
-
-    client.get_OK()
-
-launch_client_global(script='test_client')
-
-def launch_one_client(script='test_client',tileNum=-1,tileId='001'):
-    COMMAND=' '+os.path.join(CASE_DOCKER_PATH,script)
-    if ( tileNum > -1 ):
-        TilesStr=' Tiles=('+containerId(tileNum+1)+') '
-    else:
-        TilesStr=' Tiles=('+tileId+') '
-    print("launch command on %s : %s" % (TilesStr,COMMAND))
-    CommandTS=ExecuteTS+TilesStr+COMMAND
-    client.send_server(CommandTS)        
-    client.get_OK()
-
 
 def get_windows():
     client.send_server(ExecuteTS+' wmctrl -l -G')
