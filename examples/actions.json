@@ -1,7 +1,7 @@
 {
- "action1":["kill_all_containers","delete_forever"]    
+ "action1":["kill_all_containers","delete_forever"],
  "action2":["next_element","swap_horiz"],
- "action3":["clear_vnc","keyboard_hide"],
+ "action3":["remove_element","delete"],
  "action4":["Get_client_IP","fingerprint"],
  "action5":["changeSize","photo_size_select_large"],
  "action6":["launch_smallsize","tab"],
