@@ -260,32 +260,7 @@ def next_element(script='test_client',tileNum=-1,tileId='001'):
 
     nodesf=open("nodes.json",'w')
     nodesf.write(json.dumps(nodes))
-    nodesf.close()
-    
-    
-def remove_element(script='test_client',tileNum=-1,tileId='001'):
-    COMMANDKill=' killall -9 Xvnc'
-    if ( tileNum > -1 ):
-        tileId=containerId(tileNum+1)
-    else:
-        tileNum=int(tileId)-1 
-    TilesStr=' Tiles=('+tileId+') '
-    print("%s VMD command : %s" % (TilesStr,COMMANDKill))
-
-    CommandTSK=ExecuteTS+TilesStr+COMMANDKill
-    client.send_server(CommandTSK)
-    client.get_OK()
-
-    nodesf=open("nodes.json",'r')
-    nodes=json.load(nodesf)
-    nodesf.close()
-
-    del nodes["nodes"][tileNum]
-    
-    nodesf=open("nodes.json",'w')
-    nodesf.write(json.dumps(nodes))
-    nodesf.close()
-        
+    nodesf.close()        
 
 def launch_changesize(RESOL="1920x1080",tileNum=-1,tileId='001'):
     if ( tileNum > -1 ):

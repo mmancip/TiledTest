@@ -1,11 +1,10 @@
 {
  "action1":["kill_all_containers","delete_forever"],
  "action2":["next_element","swap_horiz"],
- "action3":["remove_element","delete"],
- "action4":["Get_client_IP","fingerprint"],
- "action5":["changeSize","photo_size_select_large"],
- "action6":["launch_smallsize","tab"],
- "action7":["launch_bigsize","picture_in_picture"],
- "action8":["fullscreenApp","all_out"],
- "action9":["move_glxgears","trending_up"]
+ "action3":["Get_client_IP","fingerprint"],
+ "action4":["changeSize","photo_size_select_large"],
+ "action5":["launch_smallsize","tab"],
+ "action6":["launch_bigsize","picture_in_picture"],
+ "action7":["fullscreenApp","all_out"],
+ "action8":["move_glxgears","trending_up"]
 }
