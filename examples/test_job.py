@@ -133,7 +133,7 @@ print("\n"+COMMANDStop)
 sys.stdout.flush()
 
 # Launch dockers
-# TileServer is given by TileServer.py to all containers of the tileset.
+stateVM=True
 def Run_dockers():
     COMMAND="bash -c \""+os.path.join(TILEDOCKERS_path,"launch_dockers")+" "+REF_CAS+" "+GPU_FILE+" "+HTTP_FRONTEND+":"+HTTP_IP+\
             " "+network+" "+nethost+" "+domain+" "+init_IP+" TileSetPort "+UserFront+"@"+Frontend+" "+OPTIONS+\
@@ -142,7 +142,9 @@ def Run_dockers():
     print("\nCommand dockers : "+COMMAND)
 
     client.send_server(LaunchTS+' '+COMMAND)
-    print("Out of launch dockers : "+ str(client.get_OK()))
+    state=client.get_OK()
+    stateVM=stateVM and (state == 0)
+    print("Out of launch docker : "+ str(state))
     sys.stdout.flush()
 
 Run_dockers()
@@ -150,6 +152,7 @@ sys.stdout.flush()
 
 # Build nodes.json file from new dockers list
 def build_nodes_file():
+    global stateVM
     print("Build nodes.json file from new dockers list.")
     # COMMAND=LaunchTS+' chmod u+x build_nodes_file '
     # client.send_server(COMMAND)
@@ -159,43 +162,65 @@ def build_nodes_file():
     print("\nCommand dockers : "+COMMAND)
 
     client.send_server(COMMAND)
-    print("Out of build_nodes_file : "+ str(client.get_OK()))
+    state=client.get_OK()
+    stateVM=stateVM and (state == 0)
+    print("Out of build_nodes_file : "+ str(state))
     time.sleep(2)
 
-build_nodes_file()
+if (stateVM):
+    build_nodes_file()
 sys.stdout.flush()
 
 time.sleep(2)
 # Launch docker tools
 def launch_resize(RESOL="1440x900"):
     client.send_server(ExecuteTS+' xrandr --fb '+RESOL)
-    print("Out of xrandr : "+ str(client.get_OK()))
+    state=client.get_OK()
+    print("Out of xrandr : "+ str(state))
 
-launch_resize()
+if (stateVM):
+    launch_resize()
 sys.stdout.flush()
 
 def launch_tunnel():
+    global stateVM
     # Call tunnel for VNC
     client.send_server(ExecuteTS+' /opt/tunnel_ssh '+HTTP_FRONTEND+' '+HTTP_LOGIN)
-    print("Out of tunnel_ssh : "+ str(client.get_OK()))
+    state=client.get_OK()
+    stateVM=stateVM and (state == 0)
+    print("Out of tunnel_ssh : "+ str(state))
+    if (not stateVM):
+        return
+
     # Get back PORT
     for i in range(NUM_DOCKERS):
         i0="%0.3d" % (i+1)
         client.send_server(ExecuteTS+' Tiles=('+containerId(i+1)+') '+
                            'bash -c "cat .vnc/port |xargs -I @ sed -e \"s#port='+SOCKETdomain+i0+'#port=@#\" -i CASE/nodes.json"')
-        print("Out of change port %s : " % (i0) + str(client.get_OK()))
+        state=client.get_OK()
+        stateVM=stateVM and (state == 0)
+        print("Out of change port %s : " % (i0) + str(state))
+    if (not stateVM):
+        return
 
     sys.stdout.flush()
+    if (not stateVM):
+        return
     launch_nodes_json()
 
-launch_tunnel()
+if (stateVM):
+    launch_tunnel()
 sys.stdout.flush()
 
 def launch_vnc():
+    global stateVM
     client.send_server(ExecuteTS+' /opt/vnccommand')
-    print("Out of vnccommand : "+ str(client.get_OK()))
+    state=client.get_OK()
+    stateVM=stateVM and (state == 0)
+    print("Out of vnccommand : "+ str(state))
 
-launch_vnc()
+if (stateVM):
+    launch_vnc()
 sys.stdout.flush()
 
 
@@ -219,7 +244,9 @@ def launch_client_global(script='test_client'):
 
     client.get_OK()
 
-launch_client_global(script='test_client')
+if (stateVM):
+    launch_client_global(script='test_client')
+sys.stdout.flush()
 
 def next_element(script='test_client',tileNum=-1,tileId='001'):
     COMMAND=' '+os.path.join(CASE_DOCKER_PATH,script)
@@ -283,20 +310,22 @@ def launch_bigsize(tileNum=-1,tileId='001'):
 def get_windows():
     client.send_server(ExecuteTS+' wmctrl -l -G')
     print("Out of wmctrl : "+ str(client.get_OK()))
-get_windows()
+if (stateVM):
+    get_windows()
+sys.stdout.flush()
 
 def fullscreenApp(windowname="glxgears",tileNum=-1):
     fullscreenThisApp(App=windowname,tileNum=tileNum)
 
 def movewindows(windowname="glxgears",wmctrl_option='toggle,fullscreen',tileNum=-1,tileId='001'):
+    COMMAND='/opt/movewindows '+windowname+' -b '+wmctrl_option
     #remove,maximized_vert,maximized_horz
     #toggle,above
-    #movewindows(windowname='glxgears',wmctrl_option="toggle,fullscreen",tileNum=2)
     if ( tileNum > -1 ):
         TilesStr=' Tiles=('+containerId(tileNum+1)+') '
     else:
         TilesStr=' Tiles=('+tileId+') '
-    client.send_server(ExecuteTS+TilesStr+'/opt/movewindows '+windowname+' -b '+wmctrl_option)
+    client.send_server(ExecuteTS+TilesStr+COMMAND)
     client.get_OK()
 
 def toggle_fullscr():
@@ -311,6 +340,12 @@ def kill_all_containers():
     client.send_server(LaunchTS+" "+COMMANDStop)
     client.close()
 
+try:
+    print("isActions: "+str(isActions))
+except:
+    print("isActions not defined.")
+
+#isActions=True
 launch_actions_and_interact()
 
 kill_all_containers()
