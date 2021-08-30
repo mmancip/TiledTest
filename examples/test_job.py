@@ -347,10 +347,11 @@ except:
     print("isActions not defined.")
 
 #isActions=True
-launch_actions_and_interact()
+if (stateVM):
+    launch_actions_and_interact()
 
-kill_all_containers()
+    kill_all_containers()
 
-sys.exit(0)
+    sys.exit(0)
 
 
