@@ -5,6 +5,6 @@
  "action4":["changeSize","photo_size_select_large"],
  "action5":["launch_smallsize","tab"],
  "action6":["launch_bigsize","picture_in_picture"],
- "action7":["fullscreenApp","all_out"],
+ "action7":["fullscreenApp_","all_out"],
  "action8":["move_glxgears","trending_up"]
 }

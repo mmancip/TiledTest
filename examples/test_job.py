@@ -38,6 +38,8 @@ SSL_PRIVATE=config['SITE']['SSL_PRIVATE']
 config.read(CASE_config)
 
 CASE=config['CASE']['CASE_NAME']
+App="glxgears"
+
 NUM_DOCKERS=int(config['CASE']['NUM_DOCKERS'])
 
 CASE_DOCKER_PATH=config['CASE']['CASE_DOCKER_PATH']
@@ -324,23 +326,27 @@ if (stateVM):
     get_windows()
 sys.stdout.flush()
 
+def fullscreenApp_(windowname=App,tileNum=-1):
+    fullscreenApp(windowname=App,tileNum=tileNum)
+def move_glxgears(windowname="glxgears",tileNum=-1):
+    movewindows(windowname=windowname,wmctrl_option="remove,fullscreen -e 0,+10,+20,400,400",tileNum=tileNum)
 
+        
 def toggle_fullscr():
     for i in range(NUM_DOCKERS):
         client.send_server(ExecuteTS+' Tiles=('+containerId(i+1)+') '+
-                           '/opt/movewindows OpenGL -b toggle,fullscreen')
+                           '/opt/movewindows glxgears -b toggle,fullscreen')
         client.get_OK()
 
 #isActions=True
-if (stateVM):
-    launch_actions_and_interact()
+launch_actions_and_interact()
 
 try:
     print("isActions: "+str(isActions))
 except:
     print("isActions not defined.")
 
-    kill_all_containers()
+kill_all_containers()
 
-    sys.exit(0)
+sys.exit(0)
 
