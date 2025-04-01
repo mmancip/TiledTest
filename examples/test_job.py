@@ -32,8 +32,6 @@ SSH_FRONTEND=config['SITE']['SSH_FRONTEND']
 SSH_LOGIN=config['SITE']['SSH_LOGIN']
 SSH_IP=config['SITE']['SSH_IP']
 init_IP=config['SITE']['init_IP']
-SSL_PUBLIC=config['SITE']['SSL_PUBLIC']
-SSL_PRIVATE=config['SITE']['SSL_PRIVATE']
 
 config.read(CASE_config)
 
@@ -49,6 +47,7 @@ nethost=config['CASE']['nethost']
 domain=config['CASE']['domain']
 
 OPTIONssh=config['CASE']['OPTIONssh']
+# TODO NO NEED
 SOCKETdomain=config['CASE']['SOCKETdomain']
 
 DOCKER_NAME=config['CASE']['DOCKER_NAME']
@@ -65,6 +64,8 @@ CreateTS='create TS='+TileSet+' Nb='+str(NUM_DOCKERS)
 
 client.send_server(CreateTS)
 
+COMMANDStop="echo 'JobID is not defined.'"
+
 # Global commands
 # Execute on each/a set of tiles
 ExecuteTS='execute TS='+TileSet+" "
@@ -78,7 +79,7 @@ LaunchTS='launch TS='+TileSet+" "+JOBPath+' '
 #LaunchTSC='launch TS='+TileSet+" "+CASEdir+' '
 
 # get TiledTest package from Github
-COMMAND_GIT="git clone https://github.com/mmancip/TiledTest.git"
+COMMAND_GIT="git clone -q https://github.com/mmancip/TiledTest.git"
 print("command_git : "+COMMAND_GIT)
 os.system(COMMAND_GIT)
 # Untar Test package
@@ -98,8 +99,7 @@ try:
     CASE_config=os.path.join(JOBPath,CASE_config)
     send_file_server(client,TileSet,".", SITE_config, JOBPath)
     SITE_config=os.path.join(JOBPath,os.path.basename(SITE_config))
-    send_file_server(client,TileSet,".", "list_hostsgpu", JOBPath)
-    send_file_server(client,TileSet,".", "/TiledViz/TVConnections/build_wss.py", JOBPath)
+    send_file_server(client,TileSet,".", GPU_FILE, JOBPath)
 
 except:
     print("Error sending files !")
@@ -120,7 +120,7 @@ COMMAND_copy=LaunchTS+" cp -rp TiledTest/test_client "+\
                "./"
 
 client.send_server(COMMAND_copy)
-print("Out of copy scripts from TiledCourse : "+ str(client.get_OK()))
+print("Out of copy scripts from TiledTest : "+ str(client.get_OK()))
 
 # Launch containers HERE
 REF_CAS=str(NUM_DOCKERS)+" "+DATE+" "+DOCKERSPACE_DIR+" "+DOCKER_NAME
@@ -141,22 +141,99 @@ except:
     kill_all_containers()
 
 
+# Get password file with right number of lines (NUM_DOCKERS)
+out_get=0
+try:
+    out_get=get_file_client(client,TileSet,JOBPath,"list_dockers_pass",".")
+    logging.warning("out get list_dockers_pass : "+str(out_get))
+except:
+    pass
+try:
+    count=0
+    while( int(out_get) <= 0):
+        time.sleep(10)
+        os.system('mv list_dockers_pass list_dockers_pass_')
+        out_get=get_file_client(client,TileSet,JOBPath,"list_dockers_pass",".")
+        logging.warning("out get list_dockers_pass : "+str(out_get))
+        count=count+1
+        if (count > 10):
+            logging.error("Error create list_dockers_pass. Job stopped.")
+            kill_all_containers()
+            sys.exit(0)
+except:
+    pass
+
+size=0
+try:
+    with open('list_dockers_pass') as f:
+        size=len([0 for _ in f])
+except:
+    pass
+
+while(size != NUM_DOCKERS):
+    time.sleep(10)
+    os.system('mv list_dockers_pass list_dockers_pass_')
+    try:
+        out_get=get_file_client(client,TileSet,JOBPath,"list_dockers_pass",".")
+    except:
+        pass
+    try:
+        with open('list_dockers_pass') as f:
+            size=len([0 for _ in f])
+    except:
+        pass
+
+logging.warning("list_dockers_pass OK %d %d" % (size,NUM_DOCKERS))
+
 
 try:
     if (stateVM):
         build_nodes_file()
+        
+        while(os.path.getsize("nodes.json_init") < 50):
+            time.sleep(5)
+            logging.warning("nodes.json_init to small. Try another build.")
+            build_nodes_file()
+            if (os.path.getsize("nodes.json_init") < 50):
+                logging.error("Something has gone wrong with build_nodes_file 2.")
+                kill_all_containers()
+            else:
+                break
+
     sys.stdout.flush()
 except:
     stateVM=False
     traceback.print_exc(file=sys.stdout)
     kill_all_containers()
+logging.warning("after build_nodes_json %r" % (stateVM))
+#get_file_client(client,TileSet,JOBPath,"nodes.json",".")
 
+try:
+    if (stateVM):
+        nodes_json_init()
+    sys.stdout.flush()
+except:
+    stateVM=False
+    traceback.print_exc(file=sys.stdout)
+    kill_all_containers()
+logging.warning("after nodes_json_init %r" % (stateVM))
+
+try:
+    if (stateVM):
+        stateVM=share_ssh_key()
+    sys.stdout.flush()
+except:
+    stateVM=False
+    traceback.print_exc(file=sys.stdout)
+    kill_all_containers()
+logging.warning("after share ssh keys %r" % (stateVM))
 
 time.sleep(2)
 # Launch docker tools
 if (stateVM):
     all_resize("1920x1080")
 
+logging.warning("Before launch_tunnel.")
 
 try:
     if (stateVM):
@@ -165,7 +242,7 @@ try:
 except:
     stateVM=False
     traceback.print_exc(file=sys.stdout)
-    kill_all_containers()
+    #kill_all_containers()
 print("after launch tunnel servers %r" % (stateVM))
 
 try:
@@ -174,9 +251,10 @@ try:
     nodesf.close()
 except:
     print("nodes.json doesn't exists !")
+    print("ls -la")
     stateVM=False
     traceback.print_exc(file=sys.stdout)
-    kill_all_containers()
+    #kill_all_containers()
 
 print("after read nodes.json %r" % (stateVM))
 
@@ -187,7 +265,7 @@ except:
     print("Problem when launch vnc !")
     stateVM=False
     traceback.print_exc(file=sys.stdout)
-    kill_all_containers()
+    #kill_all_containers()
 
 print("after launch vnc servers %r" % (stateVM))
 
