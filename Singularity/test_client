@@ -5,14 +5,16 @@
 
 
 echo ${SINGULARITYID}; #export DISPLAY=:1;
-export DISPLAY=$(pgrep -fa Xvfb | grep -v grep | sed -e "s&.*:\([0-9]*\) .*&:\1&")
 glxgears > ~/.vnc/out_glxgears 2>&1 &
+PID=$!
+echo glxgears $PID
 #/dev/null 2>&1 &
 
 i=0
 while [ true ]; do
     sleep 1
-    pgrep -fla glxgears | wc -l |awk '{print ($1 >= 1)}' |grep 1
+    ps -a |grep $PID
+    #glxgears | wc -l |awk '{print ($1 >= 1)}' |grep 1
     RET=$?
     if [ $RET -eq 0 ]; then
 	break
@@ -22,3 +24,5 @@ while [ true ]; do
     i=$((i+1))
 done
 exit $RET
+#strings /proc/1759194/environ |grep DISPLAY
+# ps -a |grep  1759576
