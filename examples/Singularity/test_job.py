@@ -25,6 +25,7 @@ config.read(SITE_config)
 
 TILEDVIZ_DIR=config['SITE']['TILEDVIZ_DIR']
 TILESINGULARITYS_DIR=os.path.join(TILEDVIZ_DIR,"TVConnections/Singularity")
+TilesScriptsPath=TILESINGULARITYS_DIR
 SPACE_DIR=config['SITE']['SPACE_DIR']
 #NOVNC_URL=config['SITE']['NOVNC_URL']
 GPU_FILE=config['SITE']['GPU_FILE']
@@ -61,6 +62,8 @@ CreateTS='create TS='+TileSet+' Nb='+str(NUM_DOCKERS)
 
 client.send_server(CreateTS)
 
+COMMANDStop="echo 'JobID is not defined.'"
+
 # Global commands
 # Execute on each/a set of tiles
 ExecuteTS='execute TS='+TileSet+" "
@@ -74,7 +77,7 @@ LaunchTS='launch TS='+TileSet+" "+JOBPath+' '
 #LaunchTSC='launch TS='+TileSet+" "+CASEdir+' '
 
 # get TiledTest package from Github
-COMMAND_GIT="git clone https://github.com/mmancip/TiledTest.git"
+COMMAND_GIT="git clone -q https://github.com/mmancip/TiledTest.git"
 print("command_git : "+COMMAND_GIT)
 os.system(COMMAND_GIT)
 # Untar Test package
@@ -94,8 +97,7 @@ try:
     CASE_config=os.path.join(JOBPath,CASE_config)
     send_file_server(client,TileSet,".", SITE_config, JOBPath)
     SITE_config=os.path.join(JOBPath,os.path.basename(SITE_config))
-    send_file_server(client,TileSet,".", "list_hostsgpu", JOBPath)
-    #send_file_server(client,TileSet,".", os.path.join(TILEDVIZ_DIR,"TVConnections/build_wss.py"), JOBPath)
+    send_file_server(client,TileSet,".", GPU_FILE, JOBPath)
 
 except:
     print("Error sending files !")
@@ -115,7 +117,7 @@ COMMAND_TiledTest=LaunchTS+COMMAND_GIT
 client.send_server(COMMAND_TiledTest)
 print("Out of git clone TiledTest : "+ str(client.get_OK()))
 
-COMMAND_copy=LaunchTS+" cp -rp TiledTest/test_client "+\
+COMMAND_copy=LaunchTS+" cp -rp TiledTest/Singularity/test_client "+\
                "TiledTest/build_nodes_file "+\
                "./"
 
@@ -132,19 +134,6 @@ COMMANDStop=os.path.join(TILESINGULARITYS_DIR,"stop_singularitys")+" "+REF_CAS+"
 print("\n"+COMMANDStop)
 sys.stdout.flush()
 
-# Launch singularitys
-def Run_singularitys():
-    COMMAND="bash -c \""+os.path.join(TILESINGULARITYS_DIR,"launch_singularitys")+" "+REF_CAS+" "+GPU_FILE+" "+SSH_FRONTEND+":"+SSH_IP+" "+TILEDVIZ_DIR+" "+TILESINGULARITYS_DIR+\
-             " TileSetPort "+UserFront+"@"+Frontend+" "+OPTIONS+\
-             " > "+os.path.join(JOBPath,"output_launch")+" 2>&1 \"" 
-    logging.warning("\nCommand singularitys : "+COMMAND)
-    client.send_server(LaunchTS+' '+COMMAND)
-    state=client.get_OK()
-    logging.warning("Out of launch singularity : "+ str(state))
-    sys.stdout.flush()
-    stateVM=(state == 0)
-    return stateVM
-
 try:
     stateVM=Run_singularitys()
     sys.stdout.flush()
@@ -154,22 +143,99 @@ except:
     kill_all_containers()
 
 
+# Get password file with right number of lines (NUM_DOCKERS)
+out_get=0
+try:
+    out_get=get_file_client(client,TileSet,JOBPath,"list_dockers_pass",".")
+    logging.warning("out get list_dockers_pass : "+str(out_get))
+except:
+    pass
+try:
+    count=0
+    while( int(out_get) <= 0):
+        time.sleep(10)
+        os.system('mv list_dockers_pass list_dockers_pass_')
+        out_get=get_file_client(client,TileSet,JOBPath,"list_dockers_pass",".")
+        logging.warning("out get list_dockers_pass : "+str(out_get))
+        count=count+1
+        if (count > 10):
+            logging.error("Error create list_dockers_pass. Job stopped.")
+            kill_all_containers()
+            sys.exit(0)
+except:
+    pass
+
+size=0
+try:
+    with open('list_dockers_pass') as f:
+        size=len([0 for _ in f])
+except:
+    pass
+
+while(size != NUM_DOCKERS):
+    time.sleep(10)
+    os.system('mv list_dockers_pass list_dockers_pass_')
+    try:
+        out_get=get_file_client(client,TileSet,JOBPath,"list_dockers_pass",".")
+    except:
+        pass
+    try:
+        with open('list_dockers_pass') as f:
+            size=len([0 for _ in f])
+    except:
+        pass
+
+logging.warning("list_dockers_pass OK %d %d" % (size,NUM_DOCKERS))
+
 
 try:
     if (stateVM):
         build_nodes_file()
+        
+        while(os.path.getsize("nodes.json_init") < 50):
+            time.sleep(5)
+            logging.warning("nodes.json_init to small. Try another build.")
+            build_nodes_file()
+            if (os.path.getsize("nodes.json_init") < 50):
+                logging.error("Something has gone wrong with build_nodes_file 2.")
+                kill_all_containers()
+            else:
+                break
+
     sys.stdout.flush()
 except:
     stateVM=False
     traceback.print_exc(file=sys.stdout)
     kill_all_containers()
+logging.warning("after build_nodes_json %r" % (stateVM))
+#get_file_client(client,TileSet,JOBPath,"nodes.json",".")
 
+try:
+    if (stateVM):
+        nodes_json_init()
+    sys.stdout.flush()
+except:
+    stateVM=False
+    traceback.print_exc(file=sys.stdout)
+    kill_all_containers()
+logging.warning("after nodes_json_init %r" % (stateVM))
+
+try:
+    if (stateVM):
+        stateVM=share_ssh_key()
+    sys.stdout.flush()
+except:
+    stateVM=False
+    traceback.print_exc(file=sys.stdout)
+    kill_all_containers()
+logging.warning("after share ssh keys %r" % (stateVM))
 
 time.sleep(2)
 # Launch singularity tools
 if (stateVM):
     all_resize("1920x1080")
 
+launch_tunnel=launch_tunnel_singularity
 
 try:
     if (stateVM):
@@ -348,7 +414,7 @@ def move_glxgears(windowname="glxgears",tileNum=-1):
 def toggle_fullscr():
     for i in range(NUM_DOCKERS):
         client.send_server(ExecuteTS+' Tiles=('+containerId(i+1)+') '+
-                           '/opt/movewindows glxgears -b toggle,fullscreen')
+                           os.path.join(TILESINGULARITYS_DIR,"movewindows")+' glxgears -b toggle,fullscreen')
         client.get_OK()
 
         
